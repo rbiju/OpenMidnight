@@ -13,7 +13,7 @@ import numpy as np
 import cv2
 
 _SLIDE_CACHE: "OrderedDict[str, OpenSlide]" = OrderedDict()
-_SLIDE_CACHE_LIMIT = 128
+_SLIDE_CACHE_LIMIT = 512
 
 
 def _get_slide(path: str) -> OpenSlide:
