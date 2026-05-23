@@ -1137,7 +1137,7 @@ def do_train(cfg, model, resume=False):
             drop_last=True,
             collate_fn=collate_fn,
             persistent_workers=cfg.train.num_workers > 0,
-            prefetch_factor=getattr(cfg.train, "prefetch_factor", 2),
+            prefetch_factor=cfg.train.prefetch_factor,
         )
 
     # training loop

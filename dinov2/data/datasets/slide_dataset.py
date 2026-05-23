@@ -13,11 +13,10 @@ import numpy as np
 import cv2
 
 _SLIDE_CACHE: "OrderedDict[str, OpenSlide]" = OrderedDict()
-_SLIDE_CACHE_LIMIT = 4096
+_SLIDE_CACHE_LIMIT = 128
 
 
 def _get_slide(path: str) -> OpenSlide:
-    """Return a cached OpenSlide handle, opening and LRU-evicting as needed."""
     slide = _SLIDE_CACHE.get(path)
     if slide is not None:
         _SLIDE_CACHE.move_to_end(path)
