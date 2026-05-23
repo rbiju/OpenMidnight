@@ -16,19 +16,6 @@ _SLIDE_CACHE: "OrderedDict[str, OpenSlide]" = OrderedDict()
 _SLIDE_CACHE_LIMIT = 512
 
 
-def _get_slide(path: str) -> OpenSlide:
-    slide = _SLIDE_CACHE.get(path)
-    if slide is not None:
-        _SLIDE_CACHE.move_to_end(path)
-        return slide
-    slide = OpenSlide(path)
-    _SLIDE_CACHE[path] = slide
-    if len(_SLIDE_CACHE) > _SLIDE_CACHE_LIMIT:
-        _, old = _SLIDE_CACHE.popitem(last=False)
-        old.close()
-    return slide
-
-
 def _close_all_slides():
     for slide in _SLIDE_CACHE.values():
         slide.close()
@@ -53,7 +40,15 @@ class SlideDataset(ExtendedVisionDataset):
     def get_all(self, index):
         parts = self.image_files[index].split(" ")
         path = parts[0]
-        image = _get_slide(path)
+        image = _SLIDE_CACHE.get(path)
+        if image is None:
+            image = OpenSlide(path)
+            _SLIDE_CACHE[path] = image
+            if len(_SLIDE_CACHE) > _SLIDE_CACHE_LIMIT:
+                _, old = _SLIDE_CACHE.popitem(last=False)
+                old.close()
+        else:
+            _SLIDE_CACHE.move_to_end(path)
         return image, path
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
@@ -64,7 +59,15 @@ class SlideDataset(ExtendedVisionDataset):
         y = int(y)
         level = int(level)
 
-        image = _get_slide(path)
+        image = _SLIDE_CACHE.get(path)
+        if image is None:
+            image = OpenSlide(path)
+            _SLIDE_CACHE[path] = image
+            if len(_SLIDE_CACHE) > _SLIDE_CACHE_LIMIT:
+                _, old = _SLIDE_CACHE.popitem(last=False)
+                old.close()
+        else:
+            _SLIDE_CACHE.move_to_end(path)
 
         patch_size = 224
 
