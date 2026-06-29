@@ -4,6 +4,7 @@
 # found in the LICENSE file in the root directory of this source tree.
 
 from .dino_head import DINOHead
+from .prototype_head import PrototypeHead
 from .layer_scale import LayerScale
 from .mlp import Mlp
 from .patch_embed import PatchEmbed

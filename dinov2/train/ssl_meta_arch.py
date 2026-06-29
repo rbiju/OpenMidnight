@@ -11,7 +11,7 @@ from torch import nn
 
 from dinov2.loss import DINOLoss, iBOTPatchLoss, KoLeoLoss, KDELoss
 from dinov2.models import build_model_from_cfg
-from dinov2.layers import DINOHead
+from dinov2.layers import DINOHead, PrototypeHead
 from dinov2.utils.utils import has_batchnorms
 from dinov2.utils.param_groups import get_params_groups_with_decay, fuse_params_groups
 from dinov2.fsdp import get_fsdp_wrapper, ShardedGradScaler, get_fsdp_modules, reshard_fsdp_model
@@ -63,14 +63,26 @@ class SSLMetaArch(nn.Module):
             logger.info(f"OPTIONS -- DINO -- head_bottleneck_dim: {cfg.dino.head_bottleneck_dim}")
             logger.info(f"OPTIONS -- DINO -- head_hidden_dim: {cfg.dino.head_hidden_dim}")
             self.dino_loss_weight = cfg.dino.loss_weight
-            dino_head = partial(
-                DINOHead,
-                in_dim=embed_dim,
-                out_dim=cfg.dino.head_n_prototypes,
-                hidden_dim=cfg.dino.head_hidden_dim,
-                bottleneck_dim=cfg.dino.head_bottleneck_dim,
-                nlayers=cfg.dino.head_nlayers,
-            )
+            use_prototype_head = getattr(cfg.dino, "use_prototype_head", False)
+            if use_prototype_head:
+                logger.info("OPTIONS -- DINO -- using PrototypeHead with Newton-Schulz orthogonalization")
+                dino_head = partial(
+                    PrototypeHead,
+                    in_dim=embed_dim,
+                    n_prototypes=cfg.dino.head_n_prototypes,
+                    hidden_dim=cfg.dino.head_hidden_dim,
+                    bottleneck_dim=cfg.dino.head_bottleneck_dim,
+                    nlayers=cfg.dino.head_nlayers,
+                )
+            else:
+                dino_head = partial(
+                    DINOHead,
+                    in_dim=embed_dim,
+                    out_dim=cfg.dino.head_n_prototypes,
+                    hidden_dim=cfg.dino.head_hidden_dim,
+                    bottleneck_dim=cfg.dino.head_bottleneck_dim,
+                    nlayers=cfg.dino.head_nlayers,
+                )
             self.dino_loss = DINOLoss(self.dino_out_dim)
             if self.do_koleo:
                 logger.info("OPTIONS -- DINO -- applying KOLEO regularization")
@@ -101,14 +113,26 @@ class SSLMetaArch(nn.Module):
                 logger.info(f"OPTIONS -- IBOT -- head_n_prototypes: {cfg.ibot.head_n_prototypes}")
                 logger.info(f"OPTIONS -- IBOT -- head_bottleneck_dim: {cfg.ibot.head_bottleneck_dim}")
                 logger.info(f"OPTIONS -- IBOT -- head_hidden_dim: {cfg.ibot.head_hidden_dim}")
-                ibot_head = partial(
-                    DINOHead,
-                    in_dim=embed_dim,
-                    out_dim=cfg.ibot.head_n_prototypes,
-                    hidden_dim=cfg.ibot.head_hidden_dim,
-                    bottleneck_dim=cfg.ibot.head_bottleneck_dim,
-                    nlayers=cfg.ibot.head_nlayers,
-                )
+                use_prototype_head_ibot = getattr(cfg.ibot, "use_prototype_head", False)
+                if use_prototype_head_ibot:
+                    logger.info("OPTIONS -- IBOT -- using PrototypeHead with Newton-Schulz orthogonalization")
+                    ibot_head = partial(
+                        PrototypeHead,
+                        in_dim=embed_dim,
+                        n_prototypes=cfg.ibot.head_n_prototypes,
+                        hidden_dim=cfg.ibot.head_hidden_dim,
+                        bottleneck_dim=cfg.ibot.head_bottleneck_dim,
+                        nlayers=cfg.ibot.head_nlayers,
+                    )
+                else:
+                    ibot_head = partial(
+                        DINOHead,
+                        in_dim=embed_dim,
+                        out_dim=cfg.ibot.head_n_prototypes,
+                        hidden_dim=cfg.ibot.head_hidden_dim,
+                        bottleneck_dim=cfg.ibot.head_bottleneck_dim,
+                        nlayers=cfg.ibot.head_nlayers,
+                    )
                 student_model_dict["ibot_head"] = ibot_head()
                 teacher_model_dict["ibot_head"] = ibot_head()
             else:
